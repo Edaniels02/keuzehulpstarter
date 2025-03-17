@@ -1,89 +1,127 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Keuzehulp - Stel je vraag</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            background-color: #f5f5f5;
-            padding-top: 20px;
-        }
-        .container {
-            width: 80%;
-            margin: 0 auto;
-        }
-        textarea {
-            width: 100%;
-            height: 100px;
-            padding: 10px;
-            margin-top: 10px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .response {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #e0e0e0;
-            width: 80%;
-            margin: 0 auto;
-            min-height: 100px;
-            text-align: left;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Keuzehulp</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; 
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      width: 80%;
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .question, .answer {
+      margin-bottom: 15px;
+    }
+    .question {
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .final {
+      background-color: #e0e0e0;
+      padding: 15px;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>AI Keuzehulp - Stel je vraag</h1>
-        <p>De AI Keuzehulp zal nu de eerste vraag stellen.</p>
-        
-        <div class="response" id="response">
-            AI Keuzehulp stelt de vraag: "Wat voor soort TV ben je op zoek naar?"
-        </div>
-        <br>
-        <button onclick="askQuestion()">Stel vraag</button>
-    </div>
+<div class="container">
+  <h1>AI Keuzehulp</h1>
 
-    <script>
-        let questionIndex = 0;
+  <!-- Hier tonen we de huidige vraag of het eindadvies -->
+  <div id="question" class="question">
+    Klik op "Volgende vraag" om te beginnen!
+  </div>
 
-        function askQuestion() {
-            const question = document.getElementById('response').textContent;
+  <!-- Tekstveld voor de gebruiker om antwoord in te voeren -->
+  <textarea id="userAnswer" placeholder="Typ hier je antwoord..."></textarea>
+  
+  <!-- Knop om het antwoord te versturen -->
+  <button onclick="sendAnswer()">Verstuur antwoord</button>
 
-            fetch('https://ai-keuzehulp-1002092046901.us-central1.run.app/ask', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    question: question, 
-                    question_index: questionIndex 
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('response').textContent = data.answer;
-                questionIndex = data.next_question_index;
-            })
-            .catch(error => {
-                document.getElementById('response').textContent = 'Er is een fout opgetreden: ' + error;
-            });
-        }
-    </script>
+  <!-- Div om het eindadvies te tonen -->
+  <div id="final" class="final" style="display: none;"></div>
+</div>
+
+<script>
+  // Variabelen om de state bij te houden
+  let questionIndex = 0;     // Index van de huidige vraag
+  let answers = [];          // Gebruiker's antwoorden
+
+  // Bij het klikken op "Verstuur antwoord"
+  function sendAnswer() {
+    // Haal de tekst op uit het tekstvak
+    const userAnswer = document.getElementById('userAnswer').value.trim();
+
+    // Sla het antwoord op in onze array
+    if (userAnswer) {
+      // Alleen opslaan als er een echte input is
+      answers[questionIndex] = userAnswer;
+      questionIndex++;
+    }
+
+    // Wis het tekstvak
+    document.getElementById('userAnswer').value = "";
+
+    // Stuur de data naar de server
+    fetch('https://ai-keuzehulp-1002092046901.us-central1.run.app/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionIndex: questionIndex,
+        answers: answers
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      // data bevat nextQuestion, newQuestionIndex, done
+      if (!data.done) {
+        // Er zijn nog vragen over
+        document.getElementById('question').textContent = data.nextQuestion;
+      } else {
+        // We zijn klaar, toon het eindadvies
+        document.getElementById('question').textContent = "Advies:";
+        document.getElementById('final').style.display = "block";
+        document.getElementById('final').textContent = data.nextQuestion;
+      }
+    })
+    .catch(err => {
+      document.getElementById('question').textContent = "Er is een fout opgetreden: " + err;
+    });
+  }
+</script>
 
 </body>
 </html>
+
